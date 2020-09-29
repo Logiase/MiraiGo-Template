@@ -5,7 +5,8 @@ type ModuleInfo struct {
 	// 应全局唯一
 	ID ModuleID
 
-	New func() Module
+	// Instance 返回 Module
+	Instance Module
 }
 
 func (mi ModuleInfo) String() string {

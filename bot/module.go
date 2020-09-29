@@ -13,22 +13,25 @@ type Module interface {
 	// Module 的生命周期
 
 	// Init 初始化
-	// 待所有 Module 初始化完成后进行登录
+	// 待所有 Module 初始化完成后
+	// 进行服务注册 Serve
 	Init()
 
 	// Serve 向Bot注册服务函数
-	Serve()
+	// 结束后调用 Start
+	Serve(bot *Bot)
 
 	// Start 启用Module
 	// 此处调用为
 	// ``` go
 	// go Start()
 	// ```
-	Start()
+	// 结束后进行登录
+	Start(bot *Bot)
 
 	// Stop 应用结束时对所有 Module 进行通知
 	// 在此进行资源回收
-	Stop()
+	Stop(bot *Bot, wg *sync.WaitGroup)
 }
 
 // RegisterModule - 向全局添加 Module
@@ -38,12 +41,12 @@ func RegisterModule(instance Module) {
 	if mod.ID == "" {
 		panic("module ID missing")
 	}
-	if mod.New == nil {
-		panic("missing ModuleInfo.New")
+	if mod.Instance == nil {
+		panic("missing ModuleInfo.Instance")
 	}
-	if val := mod.New(); val == nil {
-		panic("ModuleInfo.New must return a non-nil module instance")
-	}
+	//if val := mod.Instance; val == nil {
+	//	panic("ModuleInfo.Instance must return a non-nil module instance")
+	//}
 
 	modulesMu.Lock()
 	defer modulesMu.Unlock()
