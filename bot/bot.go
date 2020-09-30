@@ -14,8 +14,8 @@ import (
 
 	asc2art "github.com/yinghau76/go-ascii-art"
 
-	"MiraiGo-Template/config"
-	"MiraiGo-Template/utils"
+	"github.com/Logiase/MiraiGo-Template/config"
+	"github.com/Logiase/MiraiGo-Template/utils"
 )
 
 type Bot struct {
