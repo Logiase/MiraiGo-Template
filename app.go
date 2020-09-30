@@ -4,10 +4,9 @@ import (
 	"os"
 	"os/signal"
 
-	"MiraiGo-Template/bot"
+	"github.com/Logiase/MiraiGo-Template/bot"
 
-	// Modules On
-	_ "MiraiGo-Template/modules/logging"
+	_ "github.com/Logiase/MiraiGo-Template/modules/logging"
 )
 
 func main() {

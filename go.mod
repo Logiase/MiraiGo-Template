@@ -1,4 +1,4 @@
-module MiraiGo-Template
+module github.com/Logiase/MiraiGo-Template
 
 go 1.15
 
