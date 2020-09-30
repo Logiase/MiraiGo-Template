@@ -24,11 +24,15 @@ type Bot struct {
 	start bool
 }
 
+// Instance Bot 实例
 var Instance *Bot
 
 var logger = logrus.WithField("bot", "internal")
 
-func init() {
+// Init 快速初始化
+// 使用 config.GlobalConfig 初始化账号
+// 使用 ./device.json 初始化设备信息
+func Init() {
 	Instance = &Bot{
 		client.NewClient(
 			config.GlobalConfig.GetInt64("bot.account"),
@@ -36,9 +40,26 @@ func init() {
 		),
 		false,
 	}
-	client.SystemDeviceInfo.ReadJson(utils.ReadFile("./device.json"))
+	err := client.SystemDeviceInfo.ReadJson(utils.ReadFile("./device.json"))
+	if err != nil {
+		logger.WithError(err).Panic("device.json error")
+	}
 }
 
+// InitBot 使用 account password 进行初始化账号
+func InitBot(account int64, password string) {
+	Instance = &Bot{
+		client.NewClient(account, password),
+		false,
+	}
+}
+
+// UseDevice 使用 device 进行初始化设备信息
+func UseDevice(device []byte) error {
+	return client.SystemDeviceInfo.ReadJson(device)
+}
+
+// Login 登录
 func Login() {
 	resp, err := Instance.Login()
 	console := bufio.NewReader(os.Stdin)
@@ -68,6 +89,7 @@ func Login() {
 	logger.Info("bot login: %s", Instance.Nickname)
 }
 
+// RefreshList 刷新联系人
 func RefreshList() {
 	logger.Info("start reload friends list")
 	err := Instance.ReloadFriendList()
@@ -83,6 +105,9 @@ func RefreshList() {
 	logger.Infof("load %d groups", len(Instance.GroupList))
 }
 
+// StartService 启动服务
+// 根据 Module 生命周期 此过程应在Login前调用
+// 请勿重复调用
 func StartService() {
 	if Instance.start {
 		return
@@ -109,6 +134,8 @@ func StartService() {
 	logger.Info("tasks running")
 }
 
+// Stop 停止所有服务
+// 调用此函数并不会使Bot离线
 func Stop() {
 	logger.Warn("stopping ...")
 	wg := sync.WaitGroup{}
@@ -118,4 +145,5 @@ func Stop() {
 	}
 	wg.Wait()
 	logger.Info("stopped")
+	modules = make(map[string]ModuleInfo)
 }

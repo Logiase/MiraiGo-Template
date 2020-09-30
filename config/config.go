@@ -11,7 +11,7 @@ type Config struct {
 
 var GlobalConfig *Config
 
-func init() {
+func Init() {
 	GlobalConfig = &Config{
 		viper.New(),
 	}

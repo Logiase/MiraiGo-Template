@@ -5,11 +5,18 @@ import (
 	"os/signal"
 
 	"github.com/Logiase/MiraiGo-Template/bot"
+	"github.com/Logiase/MiraiGo-Template/config"
 
 	_ "github.com/Logiase/MiraiGo-Template/modules/logging"
 )
 
+func init() {
+	config.Init()
+}
+
 func main() {
+	bot.Init()
+
 	bot.StartService()
 	bot.Login()
 
