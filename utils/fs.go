@@ -2,6 +2,7 @@ package utils
 
 import (
 	"io/ioutil"
+	"os"
 
 	"github.com/sirupsen/logrus"
 )
@@ -13,4 +14,15 @@ func ReadFile(path string) []byte {
 		return nil
 	}
 	return bytes
+}
+
+func FileExist(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return true, err
 }
