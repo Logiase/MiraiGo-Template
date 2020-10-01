@@ -100,7 +100,7 @@ func Login() {
 		}
 		break
 	}
-	logger.Info("bot login: %s", Instance.Nickname)
+	logger.Infof("bot login: %s", Instance.Nickname)
 }
 
 // RefreshList 刷新联系人
