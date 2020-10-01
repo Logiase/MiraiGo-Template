@@ -64,6 +64,13 @@ import (
 
 使用这种方法可以引入其他小伙伴编写的第三方module
 
+### 内置 Module
+
+ - internal.logging
+ 将收到的消息按照格式输出至 os.stdout
+ - logiase.autoreply
+ 按照收到的消息进行回复 (./autoreply.yaml)
+
 ### 第三方 Module
 
 暂无 ~~呜呜呜~~
