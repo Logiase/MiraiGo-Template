@@ -3,7 +3,7 @@ A template for MiraiGo
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/Logiase/MiraiGo-Template)](https://goreportcard.com/report/github.com/Logiase/MiraiGo-Template)
 
-基于[MiraiGo](https://github.com/Mrs4s/MiraiGo)的多模块组合设计
+基于 [MiraiGo](https://github.com/Mrs4s/MiraiGo) 的多模块组合设计
 
 包装了基础功能,同时设计了一个~~良好~~的项目结构
 
@@ -78,6 +78,8 @@ import (
 
 ## 引入的第三方 go module
 
+ - [MiraiGo](https://github.com/Mrs4s/MiraiGo)
+    核心协议库
  - [viper](https://github.com/spf13/viper)
     用于解析配置文件，同时可监听配置文件的修改
  - [logrus](github.com/sirupsen/logrus)
