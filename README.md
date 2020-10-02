@@ -68,12 +68,13 @@ import (
 
  - internal.logging
  将收到的消息按照格式输出至 os.stdout
- - logiase.autoreply
- 按照收到的消息进行回复 (./autoreply.yaml)
 
 ### 第三方 Module
 
-暂无 ~~呜呜呜~~
+欢迎PR
+
+ - logiase.autoreply
+ 按照收到的消息进行回复 (./autoreply.yaml)
 
 ## 引入的第三方 go module
 
