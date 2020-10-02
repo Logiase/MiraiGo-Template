@@ -74,7 +74,7 @@ import (
 欢迎PR
 
  - logiase.autoreply
- 按照收到的消息进行回复 (./autoreply.yaml)
+ 按照收到的消息进行回复
 
 ## 引入的第三方 go module
 
