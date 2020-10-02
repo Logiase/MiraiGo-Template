@@ -7,6 +7,12 @@ A template for MiraiGo
 
 包装了基础功能,同时设计了一个~~良好~~的项目结构
 
+# 不了解go?
+
+golang 极速入门
+
+[点我看书](https://github.com/justjavac/free-programming-books-zh_CN#go)
+
 ## 基础配置
 
 账号配置[application.yaml](./application.yaml)
