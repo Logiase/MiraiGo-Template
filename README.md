@@ -73,7 +73,7 @@ import (
 
 欢迎PR
 
- - logiase.autoreply
+ - [logiase.autoreply](https://github.com/Logiase/MiraiGo-module-autoreply)
  按照收到的消息进行回复
 
 ## 引入的第三方 go module
