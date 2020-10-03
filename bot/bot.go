@@ -19,6 +19,7 @@ import (
 	"github.com/Logiase/MiraiGo-Template/utils"
 )
 
+// Bot 全局 Bot
 type Bot struct {
 	*client.QQClient
 

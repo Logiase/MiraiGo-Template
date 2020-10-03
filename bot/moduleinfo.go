@@ -1,5 +1,6 @@
 package bot
 
+// ModuleInfo 模块信息
 type ModuleInfo struct {
 	// ID 模块的名称
 	// 应全局唯一

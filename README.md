@@ -7,7 +7,7 @@ A template for MiraiGo
 
 包装了基础功能,同时设计了一个~~良好~~的项目结构
 
-# 不了解go?
+## 不了解go?
 
 golang 极速入门
 
@@ -81,8 +81,22 @@ import (
 
  - [logiase.autoreply](https://github.com/Logiase/MiraiGo-module-autoreply)
  按照收到的消息进行回复
+ 
+# 进阶内容 
 
-## 引入的第三方 go module
+## Docker 支持
+
+参照 [Dockerfile](./Dockerfile)
+
+## Logs 
+
+将日志转储至文件
+
+### 使用 supervisor 等工具
+
+
+
+# 引入的第三方 go module
 
  - [MiraiGo](https://github.com/Mrs4s/MiraiGo)
     核心协议库
