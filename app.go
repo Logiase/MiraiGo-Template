@@ -6,11 +6,13 @@ import (
 
 	"github.com/Logiase/MiraiGo-Template/bot"
 	"github.com/Logiase/MiraiGo-Template/config"
+	"github.com/Logiase/MiraiGo-Template/utils"
 
 	_ "github.com/Logiase/MiraiGo-Template/modules/logging"
 )
 
 func init() {
+	utils.WriteLogToFS()
 	config.Init()
 }
 
