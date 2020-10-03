@@ -88,14 +88,6 @@ import (
 
 参照 [Dockerfile](./Dockerfile)
 
-## Logs 
-
-将日志转储至文件
-
-### 使用 supervisor 等工具
-
-
-
 # 引入的第三方 go module
 
  - [MiraiGo](https://github.com/Mrs4s/MiraiGo)
