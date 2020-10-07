@@ -20,6 +20,7 @@ func Init() {
 	GlobalConfig.SetConfigName("application")
 	GlobalConfig.SetConfigType("yaml")
 	GlobalConfig.AddConfigPath(".")
+	GlobalConfig.AddConfigPath("./config")
 
 	err := GlobalConfig.ReadInConfig()
 	if err != nil {
