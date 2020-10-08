@@ -106,11 +106,12 @@ func Login() {
 				if Instance.RequestSNS() {
 					logger.Warnf("SNS sended")
 				} else {
-					logger.Warnf("SNS send failed")
+					logger.Warnf("SNS send failed, if you have latest SNS code, please input")
+					logger.Warnf("if not, please try later")
 				}
 				logger.Warnf("please input SNS code:")
 				c, _ = console.ReadString('\n')
-				resp, err = Instance.SubmitSNS(c)
+				resp, err = Instance.SubmitSNS(strings.TrimSpace(c))
 				continue
 			case client.OtherLoginError, client.UnknownLoginError, client.TooManySNSRequestError, client.SNSNeededError:
 				logger.Fatalf("login failed: %v", resp.ErrorMessage)
