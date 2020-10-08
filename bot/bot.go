@@ -95,7 +95,27 @@ func Login() {
 			case client.UnsafeDeviceError:
 				logger.Warnf("device lock -> %v", resp.VerifyUrl)
 				return
-			case client.OtherLoginError, client.UnknownLoginError:
+			case client.SNSOrVerifyNeededError:
+				fmt.Println(resp)
+				logger.Warnf("SNS needed: phone: %s", resp.SMSPhone)
+				logger.Warnf("send SNS?(y/n)")
+				c, _ := console.ReadString('\n')
+				c = strings.TrimSpace(c)
+				fmt.Println(c)
+				fmt.Println("----")
+				if c != "y" {
+					os.Exit(-1)
+				}
+				if Instance.RequestSNS() {
+					logger.Warnf("SNS sended")
+				} else {
+					logger.Warnf("SNS send failed")
+				}
+				logger.Warnf("please input SNS code:")
+				c, _ = console.ReadString('\n')
+				resp, err = Instance.SubmitSNS(c)
+				continue
+			case client.OtherLoginError, client.UnknownLoginError, client.TooManySNSRequestError, client.SNSNeededError:
 				logger.Fatalf("login failed: %v", resp.ErrorMessage)
 			}
 		}
