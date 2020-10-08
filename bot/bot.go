@@ -96,13 +96,10 @@ func Login() {
 				logger.Warnf("device lock -> %v", resp.VerifyUrl)
 				return
 			case client.SNSOrVerifyNeededError:
-				fmt.Println(resp)
 				logger.Warnf("SNS needed: phone: %s", resp.SMSPhone)
 				logger.Warnf("send SNS?(y/n)")
 				c, _ := console.ReadString('\n')
 				c = strings.TrimSpace(c)
-				fmt.Println(c)
-				fmt.Println("----")
 				if c != "y" {
 					os.Exit(-1)
 				}
