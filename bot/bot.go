@@ -12,7 +12,6 @@ import (
 
 	"github.com/Mrs4s/MiraiGo/client"
 	"github.com/sirupsen/logrus"
-
 	asc2art "github.com/yinghau76/go-ascii-art"
 
 	"github.com/Logiase/MiraiGo-Template/config"
@@ -68,7 +67,7 @@ func GenRandomDevice() {
 	if b {
 		logger.Warn("device.json exists, will not write device to file")
 	}
-	err := ioutil.WriteFile("./device.json", client.SystemDeviceInfo.ToJson(), os.FileMode(0755))
+	err := ioutil.WriteFile("device.json", client.SystemDeviceInfo.ToJson(), os.FileMode(0755))
 	if err != nil {
 		logger.WithError(err).Errorf("unable to write device.json")
 	}
@@ -78,47 +77,85 @@ func GenRandomDevice() {
 func Login() {
 	resp, err := Instance.Login()
 	console := bufio.NewReader(os.Stdin)
+
 	for {
 		if err != nil {
 			logger.WithError(err).Fatal("unable to login")
 		}
 
+		var text string
 		if !resp.Success {
 			switch resp.Error {
+			case client.SliderNeededError:
+				if client.SystemDeviceInfo.Protocol == client.AndroidPhone {
+					logger.Warn("Android Phone Protocol DO NOT SUPPORT Slide verify")
+					logger.Warn("please use other protocol")
+					os.Exit(2)
+				}
+				Instance.AllowSlider = false
+				Instance.Disconnect()
+				resp, err = Instance.Login()
+				continue
 			case client.NeedCaptcha:
 				img, _, _ := image.Decode(bytes.NewReader(resp.CaptchaImage))
 				fmt.Println(asc2art.New("image", img).Art)
-				logger.Warn("captcha: ")
+				fmt.Print("please input captcha: ")
 				text, _ := console.ReadString('\n')
 				resp, err = Instance.SubmitCaptcha(strings.ReplaceAll(text, "\n", ""), resp.CaptchaSign)
 				continue
-			case client.UnsafeDeviceError:
-				logger.Warnf("device lock -> %v", resp.VerifyUrl)
-				return
-			case client.SNSOrVerifyNeededError:
-				logger.Warnf("SNS needed: phone: %s", resp.SMSPhone)
-				logger.Warnf("send SNS?(y/n)")
-				c, _ := console.ReadString('\n')
-				c = strings.TrimSpace(c)
-				if c != "y" {
-					os.Exit(-1)
+			case client.SMSNeededError:
+				fmt.Println("device lock enabled, Need SMS Code")
+				fmt.Printf("Send SMS to %s ? (yes)", resp.SMSPhone)
+				t, _ := console.ReadString('\n')
+				t = strings.TrimSpace(t)
+				if t != "yes" {
+					os.Exit(2)
 				}
-				if Instance.RequestSNS() {
-					logger.Warnf("SNS sended")
-				} else {
-					logger.Warnf("SNS send failed, if you have latest SNS code, please input")
-					logger.Warnf("if not, please try later")
+				if !Instance.RequestSMS() {
+					logger.Warnf("unable to request SMS Code")
+					os.Exit(2)
 				}
-				logger.Warnf("please input SNS code:")
-				c, _ = console.ReadString('\n')
-				resp, err = Instance.SubmitSNS(strings.TrimSpace(c))
+				logger.Warn("please input SMS Code: ")
+				text, _ = console.ReadString('\n')
+				resp, err = Instance.SubmitSMS(strings.ReplaceAll(strings.ReplaceAll(text, "\n", ""), "\r", ""))
 				continue
-			case client.OtherLoginError, client.UnknownLoginError, client.TooManySNSRequestError, client.SNSNeededError:
+			case client.SMSOrVerifyNeededError:
+				fmt.Println("device lock enabled, choose way to verify:")
+				fmt.Println("1. Send SMS Code to ", resp.SMSPhone)
+				fmt.Println("2. Scan QR Code")
+				fmt.Print("input (1,2):")
+				text, _ = console.ReadString('\n')
+				text = strings.TrimSpace(text)
+				switch text {
+				case "1":
+					if !Instance.RequestSMS() {
+						logger.Warnf("unable to request SMS Code")
+						os.Exit(2)
+					}
+					logger.Warn("please input SMS Code: ")
+					text, _ = console.ReadString('\n')
+					resp, err = Instance.SubmitSMS(strings.ReplaceAll(strings.ReplaceAll(text, "\n", ""), "\r", ""))
+					continue
+				case "2":
+					fmt.Printf("device lock -> %v\n", resp.VerifyUrl)
+					os.Exit(2)
+				default:
+					fmt.Println("invalid input")
+					os.Exit(2)
+				}
+			case client.UnsafeDeviceError:
+				fmt.Printf("device lock -> %v\n", resp.VerifyUrl)
+				os.Exit(2)
+			case client.OtherLoginError, client.UnknownLoginError:
 				logger.Fatalf("login failed: %v", resp.ErrorMessage)
+				os.Exit(3)
 			}
+
 		}
+
 		break
 	}
+
 	logger.Infof("bot login: %s", Instance.Nickname)
 }
 

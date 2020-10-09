@@ -3,7 +3,7 @@ module github.com/Logiase/MiraiGo-Template
 go 1.15
 
 require (
-	github.com/Mrs4s/MiraiGo v0.0.0-20201007142322-6e7abb00aaa6
+	github.com/Mrs4s/MiraiGo v0.0.0-20201009082833-890dba3f5a82
 	github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/jehiah/go-strftime v0.0.0-20171201141054-1d33003b3869 // indirect
@@ -22,7 +22,7 @@ require (
 	github.com/spf13/viper v1.7.1
 	github.com/tebeka/strftime v0.1.5 // indirect
 	github.com/yinghau76/go-ascii-art v0.0.0-20190517192627-e7f465a30189
-	golang.org/x/sys v0.0.0-20201007165808-a893ed343c85 // indirect
+	golang.org/x/sys v0.0.0-20201009025420-dfb3f7c4e634 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
