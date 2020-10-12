@@ -189,6 +189,9 @@ func StartService() {
 	for _, mi := range modules {
 		mi.Instance.Init()
 	}
+	for _, mi := range modules {
+		mi.Instance.PostInit()
+	}
 	logger.Info("all modules initialized")
 
 	logger.Info("registering modules serve functions ...")
