@@ -3,6 +3,7 @@ module github.com/Logiase/MiraiGo-Template
 go 1.15
 
 require (
+	github.com/6tail/lunar-go v1.0.22
 	github.com/Mrs4s/MiraiGo v0.0.0-20201010081553-94e56eff4549
 	github.com/fastly/go-utils v0.0.0-20180712184237-d95a45783239 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
@@ -24,5 +25,5 @@ require (
 	github.com/yinghau76/go-ascii-art v0.0.0-20190517192627-e7f465a30189
 	golang.org/x/sys v0.0.0-20201009025420-dfb3f7c4e634 // indirect
 	gopkg.in/ini.v1 v1.62.0 // indirect
-	gopkg.in/yaml.v2 v2.3.0 // indirect
+	gopkg.in/yaml.v2 v2.3.0
 )
