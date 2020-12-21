@@ -6,8 +6,9 @@ type protocol int
 
 const (
 	AndroidPhone = protocol(client.AndroidPhone)
-	AndroidPad   = protocol(client.AndroidPad)
+	IPad   = protocol(client.IPad)
 	AndroidWatch = protocol(client.AndroidWatch)
+	MacOS = protocol(client.MacOS)
 )
 
 // UseProtocol 使用协议
