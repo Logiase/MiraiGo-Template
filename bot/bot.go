@@ -4,18 +4,17 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	asc2art "github.com/yinghau76/go-ascii-art"
 	"image"
 	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
 
-	"github.com/Mrs4s/MiraiGo/client"
-	"github.com/sirupsen/logrus"
-	asc2art "github.com/yinghau76/go-ascii-art"
-
 	"github.com/Logiase/MiraiGo-Template/config"
 	"github.com/Logiase/MiraiGo-Template/utils"
+	"github.com/Mrs4s/MiraiGo/client"
+	"github.com/sirupsen/logrus"
 )
 
 // Bot 全局 Bot
@@ -86,16 +85,7 @@ func Login() {
 		var text string
 		if !resp.Success {
 			switch resp.Error {
-			case client.SliderNeededError:
-				if client.SystemDeviceInfo.Protocol == client.AndroidPhone {
-					logger.Warn("Android Phone Protocol DO NOT SUPPORT Slide verify")
-					logger.Warn("please use other protocol")
-					os.Exit(2)
-				}
-				Instance.AllowSlider = false
-				Instance.Disconnect()
-				resp, err = Instance.Login()
-				continue
+
 			case client.NeedCaptcha:
 				img, _, _ := image.Decode(bytes.NewReader(resp.CaptchaImage))
 				fmt.Println(asc2art.New("image", img).Art)
@@ -103,6 +93,11 @@ func Login() {
 				text, _ := console.ReadString('\n')
 				resp, err = Instance.SubmitCaptcha(strings.ReplaceAll(text, "\n", ""), resp.CaptchaSign)
 				continue
+
+			case client.UnsafeDeviceError:
+				fmt.Printf("device lock -> %v\n", resp.VerifyUrl)
+				os.Exit(4)
+
 			case client.SMSNeededError:
 				fmt.Println("device lock enabled, Need SMS Code")
 				fmt.Printf("Send SMS to %s ? (yes)", resp.SMSPhone)
@@ -119,6 +114,11 @@ func Login() {
 				text, _ = console.ReadString('\n')
 				resp, err = Instance.SubmitSMS(strings.ReplaceAll(strings.ReplaceAll(text, "\n", ""), "\r", ""))
 				continue
+
+			case client.TooManySMSRequestError:
+				fmt.Printf("too many SMS request, please try later.\n")
+				os.Exit(6)
+
 			case client.SMSOrVerifyNeededError:
 				fmt.Println("device lock enabled, choose way to verify:")
 				fmt.Println("1. Send SMS Code to ", resp.SMSPhone)
@@ -143,9 +143,18 @@ func Login() {
 					fmt.Println("invalid input")
 					os.Exit(2)
 				}
-			case client.UnsafeDeviceError:
-				fmt.Printf("device lock -> %v\n", resp.VerifyUrl)
-				os.Exit(2)
+
+			case client.SliderNeededError:
+				if client.SystemDeviceInfo.Protocol == client.AndroidPhone {
+					logger.Warn("Android Phone Protocol DO NOT SUPPORT Slide verify")
+					logger.Warn("please use other protocol")
+					os.Exit(2)
+				}
+				Instance.AllowSlider = false
+				Instance.Disconnect()
+				resp, err = Instance.Login()
+				continue
+
 			case client.OtherLoginError, client.UnknownLoginError:
 				logger.Fatalf("login failed: %v", resp.ErrorMessage)
 				os.Exit(3)
