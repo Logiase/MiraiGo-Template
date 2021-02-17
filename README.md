@@ -64,31 +64,43 @@ import (
 // ...
 ```
 
-## 将 [MiraiGo-Template](https://github.com/Logiase/MiraiGo-Template) 作为go module使用
+## 快速入门
+
+你可以克隆本项目, 或者将本项目作为依赖.
+
+### 克隆
+
+如果你克隆本项目, 请首先更新项目依赖, 同步到协议库最新版本, 否则可能出现某些意外的bug ( 或产生新的bug )
+
+```go
+go get -u
+```
+
+### 将 [MiraiGo-Template](https://github.com/Logiase/MiraiGo-Template) 作为go module使用
 
 可参考当前 [app.go](./app.go) 将其引入
 
 使用这种方法可以引入其他小伙伴编写的第三方module
 
-### 内置 Module
+## 内置 Module
 
  - internal.logging
  将收到的消息按照格式输出至 os.stdout
 
-### 第三方 Module
+## 第三方 Module
 
 欢迎PR
 
  - [logiase.autoreply](https://github.com/Logiase/MiraiGo-module-autoreply)
  按照收到的消息进行回复
  
-# 进阶内容 
+## 进阶内容 
 
-## Docker 支持
+### Docker 支持
 
 参照 [Dockerfile](./Dockerfile)
 
-# 引入的第三方 go module
+## 引入的第三方 go module
 
  - [MiraiGo](https://github.com/Mrs4s/MiraiGo)
     核心协议库
