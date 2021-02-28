@@ -68,6 +68,26 @@ import (
 
 你可以克隆本项目, 或者将本项目作为依赖.
 
+在开始之前, 你需要首先生成设备文件.
+
+新建文件 `tools_test.go` , 内容如下:
+
+```go
+package main_test
+
+import (
+	"testing"
+
+	"github.com/Logiase/MiraiGo-Template/bot"
+)
+
+func TestGenDevice(t *testing.T) {
+	bot.GenRandomDevice()
+}
+```
+
+然后运行 `TestGenDevice` 来生成一份设备文件
+
 ### 克隆
 
 如果你克隆本项目, 请首先更新项目依赖, 同步到协议库最新版本, 否则可能出现某些意外的bug ( 或产生新的bug )
