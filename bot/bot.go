@@ -4,12 +4,13 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	asc2art "github.com/yinghau76/go-ascii-art"
 	"image"
 	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
+
+	asc2art "github.com/yinghau76/go-ascii-art"
 
 	"github.com/Logiase/MiraiGo-Template/config"
 	"github.com/Logiase/MiraiGo-Template/utils"
@@ -129,10 +130,10 @@ func Login() {
 				switch text {
 				case "1":
 					if !Instance.RequestSMS() {
-						logger.Warnf("unable to request SMS Code")
+						fmt.Println("unable to request SMS Code")
 						os.Exit(2)
 					}
-					logger.Warn("please input SMS Code: ")
+					fmt.Print("please input SMS Code: ")
 					text, _ = console.ReadString('\n')
 					resp, err = Instance.SubmitSMS(strings.ReplaceAll(strings.ReplaceAll(text, "\n", ""), "\r", ""))
 					continue
@@ -146,8 +147,8 @@ func Login() {
 
 			case client.SliderNeededError:
 				if client.SystemDeviceInfo.Protocol == client.AndroidPhone {
-					logger.Warn("Android Phone Protocol DO NOT SUPPORT Slide verify")
-					logger.Warn("please use other protocol")
+					fmt.Println("Android Phone Protocol DO NOT SUPPORT Slide verify")
+					fmt.Println("please use other protocol")
 					os.Exit(2)
 				}
 				Instance.AllowSlider = false
@@ -157,7 +158,6 @@ func Login() {
 
 			case client.OtherLoginError, client.UnknownLoginError:
 				logger.Fatalf("login failed: %v", resp.ErrorMessage)
-				os.Exit(3)
 			}
 
 		}
