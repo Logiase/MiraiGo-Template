@@ -1,5 +1,8 @@
 # MiraiGo-Template
+
 A template for MiraiGo
+
+> v2 版本正在重写，请提出 *你的想法* 或 *你对当前设计的不满*  
 
 [![Go Report Card](https://goreportcard.com/badge/github.com/Logiase/MiraiGo-Template)](https://goreportcard.com/report/github.com/Logiase/MiraiGo-Template)
 
