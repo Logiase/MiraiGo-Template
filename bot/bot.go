@@ -5,82 +5,95 @@ import (
 	"bytes"
 	"fmt"
 	"image"
-	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
-	"sync"
 
-	asc2art "github.com/yinghau76/go-ascii-art"
-
-	"github.com/Logiase/MiraiGo-Template/config"
-	"github.com/Logiase/MiraiGo-Template/utils"
+	"github.com/Logiase/MiraiGo-Template/v2/logging"
 	"github.com/Mrs4s/MiraiGo/client"
-	"github.com/sirupsen/logrus"
+	asc2art "github.com/yinghau76/go-ascii-art"
 )
 
-// Bot 全局 Bot
+// Bot client.QQClient 包装
 type Bot struct {
 	*client.QQClient
 
 	start bool
+
+	logger logging.ILogger
 }
 
-// Instance Bot 实例
+/******************************************
+ **           Global Instance            **
+ ******************************************/
+
+// Instance 全局Bot实例
+// 单 Bot 设计
 var Instance *Bot
 
-var logger = logrus.WithField("bot", "internal")
-
-// Init 快速初始化
-// 使用 config.GlobalConfig 初始化账号
-// 使用 ./device.json 初始化设备信息
-func Init() {
-	Instance = &Bot{
-		client.NewClient(
-			config.GlobalConfig.GetInt64("bot.account"),
-			config.GlobalConfig.GetString("bot.password"),
-		),
-		false,
-	}
-	err := client.SystemDeviceInfo.ReadJson(utils.ReadFile("./device.json"))
-	if err != nil {
-		logger.WithError(err).Panic("device.json error")
-	}
+// InitBot 初始化全局默认Bot
+func InitBot(b *Bot) {
+	Instance = b
 }
 
-// InitBot 使用 account password 进行初始化账号
-func InitBot(account int64, password string) {
-	Instance = &Bot{
+// LoginP 使用Instance进行登录
+func LoginP() {
+	Instance.LoginP()
+}
+
+// RefreshList 使用Instance刷新联系人
+func RefreshList() {
+	Instance.RefreshList()
+}
+
+// StartService 启动服务
+//
+// 请勿重复调用
+func StartService() {
+	Instance.StartService()
+}
+
+/******************************************
+ **                 Bot                  **
+ ******************************************/
+
+// NewBot 创建新Bot实例
+// 使用默认设置
+func NewBot(account int64, password string) *Bot {
+	return &Bot{
 		client.NewClient(account, password),
 		false,
+		logging.NewLogger(strconv.FormatInt(account, 10)),
 	}
 }
 
-// UseDevice 使用 device 进行初始化设备信息
-func UseDevice(device []byte) error {
-	return client.SystemDeviceInfo.ReadJson(device)
-}
-
-// GenRandomDevice 生成随机设备信息
-func GenRandomDevice() {
-	client.GenRandomDevice()
-	b, _ := utils.FileExist("./device.json")
-	if b {
-		logger.Warn("device.json exists, will not write device to file")
-	}
-	err := ioutil.WriteFile("device.json", client.SystemDeviceInfo.ToJson(), os.FileMode(0755))
-	if err != nil {
-		logger.WithError(err).Errorf("unable to write device.json")
+// NewBotWithLogger 创建新Bot实例
+func NewBotWithLogger(account int64, password string, logger logging.ILogger) *Bot {
+	return &Bot{
+		client.NewClient(account, password),
+		false,
+		logger,
 	}
 }
 
-// Login 登录
-func Login() {
-	resp, err := Instance.Login()
+// NewBotMD5 创建新Bot实例
+func NewBotMD5(account int64, passwordMD5 [16]byte) *Bot {
+	return &Bot{
+		client.NewClientMd5(account, passwordMD5),
+		false,
+		logging.NewLogger(strconv.FormatInt(account, 10)),
+	}
+}
+
+// LoginP 登录
+// (因为函数名冲突)
+func (b *Bot) LoginP() {
+	resp, err := b.Login()
 	console := bufio.NewReader(os.Stdin)
 
 	for {
 		if err != nil {
-			logger.WithError(err).Fatal("unable to login")
+			b.logger.Fatalf("unable to login: %v", err)
 		}
 
 		var text string
@@ -92,7 +105,7 @@ func Login() {
 				fmt.Println(asc2art.New("image", img).Art)
 				fmt.Print("please input captcha: ")
 				text, _ := console.ReadString('\n')
-				resp, err = Instance.SubmitCaptcha(strings.ReplaceAll(text, "\n", ""), resp.CaptchaSign)
+				resp, err = b.SubmitCaptcha(strings.ReplaceAll(text, "\n", ""), resp.CaptchaSign)
 				continue
 
 			case client.UnsafeDeviceError:
@@ -107,18 +120,16 @@ func Login() {
 				if t != "yes" {
 					os.Exit(2)
 				}
-				if !Instance.RequestSMS() {
-					logger.Warnf("unable to request SMS Code")
-					os.Exit(2)
+				if !b.RequestSMS() {
+					b.logger.Fatalf("unable to request SMS Code")
 				}
-				logger.Warn("please input SMS Code: ")
+				fmt.Printf("please input SMS Code: ")
 				text, _ = console.ReadString('\n')
-				resp, err = Instance.SubmitSMS(strings.ReplaceAll(strings.ReplaceAll(text, "\n", ""), "\r", ""))
+				resp, err = b.SubmitSMS(strings.ReplaceAll(strings.ReplaceAll(text, "\n", ""), "\r", ""))
 				continue
 
 			case client.TooManySMSRequestError:
-				fmt.Printf("too many SMS request, please try later.\n")
-				os.Exit(6)
+				b.logger.Fatalf("too many SMS request, please try later.\n")
 
 			case client.SMSOrVerifyNeededError:
 				fmt.Println("device lock enabled, choose way to verify:")
@@ -129,13 +140,13 @@ func Login() {
 				text = strings.TrimSpace(text)
 				switch text {
 				case "1":
-					if !Instance.RequestSMS() {
+					if !b.RequestSMS() {
 						fmt.Println("unable to request SMS Code")
 						os.Exit(2)
 					}
 					fmt.Print("please input SMS Code: ")
 					text, _ = console.ReadString('\n')
-					resp, err = Instance.SubmitSMS(strings.ReplaceAll(strings.ReplaceAll(text, "\n", ""), "\r", ""))
+					resp, err = b.SubmitSMS(strings.ReplaceAll(strings.ReplaceAll(text, "\n", ""), "\r", ""))
 					continue
 				case "2":
 					fmt.Printf("device lock -> %v\n", resp.VerifyUrl)
@@ -151,81 +162,87 @@ func Login() {
 					fmt.Println("please use other protocol")
 					os.Exit(2)
 				}
-				Instance.AllowSlider = false
-				Instance.Disconnect()
-				resp, err = Instance.Login()
+				b.AllowSlider = false
+				b.Disconnect()
+				resp, err = b.Login()
 				continue
 
 			case client.OtherLoginError, client.UnknownLoginError:
-				logger.Fatalf("login failed: %v", resp.ErrorMessage)
+				b.logger.Fatalf("login failed: %v", resp.ErrorMessage)
 			}
 
 		}
 
 		break
 	}
-
-	logger.Infof("bot login: %s", Instance.Nickname)
+	b.logger.Infof("bot login: %s", b.Nickname)
 }
 
 // RefreshList 刷新联系人
-func RefreshList() {
-	logger.Info("start reload friends list")
+func (b *Bot) RefreshList() {
+	b.logger.Infof("start reload friends list")
 	err := Instance.ReloadFriendList()
 	if err != nil {
-		logger.WithError(err).Error("unable to load friends list")
+		b.logger.Errorf("unable to load friends list: %v", err)
 	}
-	logger.Infof("load %d friends", len(Instance.FriendList))
-	logger.Info("start reload groups list")
+	b.logger.Infof("load %d friends", len(Instance.FriendList))
+	b.logger.Infof("start reload groups list")
 	err = Instance.ReloadGroupList()
 	if err != nil {
-		logger.WithError(err).Error("unable to load groups list")
+		b.logger.Errorf("unable to load groups list: %v", err)
 	}
-	logger.Infof("load %d groups", len(Instance.GroupList))
+	b.logger.Infof("load %d groups", len(Instance.GroupList))
 }
 
 // StartService 启动服务
-// 根据 Module 生命周期 此过程应在Login前调用
+//
 // 请勿重复调用
-func StartService() {
-	if Instance.start {
-		return
-	}
+func (b *Bot) StartService() {
 
-	Instance.start = true
-
-	logger.Infof("initializing modules ...")
-	for _, mi := range modules {
-		mi.Instance.Init()
-	}
-	for _, mi := range modules {
-		mi.Instance.PostInit()
-	}
-	logger.Info("all modules initialized")
-
-	logger.Info("registering modules serve functions ...")
-	for _, mi := range modules {
-		mi.Instance.Serve(Instance)
-	}
-	logger.Info("all modules serve functions registered")
-
-	logger.Info("starting modules tasks ...")
-	for _, mi := range modules {
-		go mi.Instance.Start(Instance)
-	}
-	logger.Info("tasks running")
 }
 
-// Stop 停止所有服务
-// 调用此函数并不会使Bot离线
-func Stop() {
-	logger.Warn("stopping ...")
-	wg := sync.WaitGroup{}
-	for _, mi := range modules {
-		wg.Add(1)
-		mi.Instance.Stop(Instance, &wg)
-	}
-	wg.Wait()
-	logger.Info("stopped")
-	modules = make(map[string]ModuleInfo)
-}
+// // StartService 启动服务
+// // 根据 Module 生命周期 此过程应在Login前调用
+// // 请勿重复调用
+// func StartService() {
+// 	if Instance.start {
+// 		return
+// 	}
+
+// 	Instance.start = true
+
+// 	logger.Infof("initializing modules ...")
+// 	for _, mi := range modules {
+// 		mi.Instance.Init()
+// 	}
+// 	for _, mi := range modules {
+// 		mi.Instance.PostInit()
+// 	}
+// 	logger.Info("all modules initialized")
+
+// 	logger.Info("registering modules serve functions ...")
+// 	for _, mi := range modules {
+// 		mi.Instance.Serve(Instance)
+// 	}
+// 	logger.Info("all modules serve functions registered")
+
+// 	logger.Info("starting modules tasks ...")
+// 	for _, mi := range modules {
+// 		go mi.Instance.Start(Instance)
+// 	}
+// 	logger.Info("tasks running")
+// }
+
+// // Stop 停止所有服务
+// // 调用此函数并不会使Bot离线
+// func Stop() {
+// 	logger.Warn("stopping ...")
+// 	wg := sync.WaitGroup{}
+// 	for _, mi := range modules {
+// 		wg.Add(1)
+// 		mi.Instance.Stop(Instance, &wg)
+// 	}
+// 	wg.Wait()
+// 	logger.Info("stopped")
+// 	modules = make(map[string]ModuleInfo)
+// }
