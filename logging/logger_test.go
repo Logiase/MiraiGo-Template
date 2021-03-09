@@ -6,7 +6,7 @@ import (
 )
 
 func TestLogger(t *testing.T) {
-	logger := logging.Logger{}
+	logger := logging.NewLogger("test")
 
 	logger.Printf("print\n")
 	logger.Debugf("debug\n")
