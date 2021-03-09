@@ -9,15 +9,15 @@ import (
 func TestLogger(t *testing.T) {
 	logger := logging.NewLogger("test")
 
-	logger.Printf("print\n")
-	logger.Debugf("debug\n")
-	logger.Infof("info\n")
-	logger.Warnf("warn\n")
-	logger.Errorf("error\n")
+	logger.Printf("print")
+	logger.Debugf("debug")
+	logger.Infof("info")
+	logger.Warnf("warn")
+	logger.Errorf("error")
 	defer func() {
 		if recover(); true {
-			logger.Fatalf("fatal\n")
+			logger.Fatalf("fatal")
 		}
 	}()
-	// logger.Panicf("panic\n")
+	// logger.Panicf("panic")
 }

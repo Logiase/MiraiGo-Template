@@ -16,3 +16,6 @@ type ILogger interface {
 	Panicf(format string, v ...interface{})
 	Fatalf(format string, v ...interface{})
 }
+
+// InternalLogger internal logger
+var InternalLogger = NewLogger("internal")

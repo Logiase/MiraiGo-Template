@@ -35,8 +35,8 @@ type Logger struct {
 }
 
 // NewLogger 创建新 Logger 实例
-func NewLogger(id string) Logger {
-	return Logger{
+func NewLogger(id string) *Logger {
+	return &Logger{
 		ID:    id,
 		debug: false,
 	}
