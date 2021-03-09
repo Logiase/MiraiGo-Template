@@ -1,5 +1,5 @@
 # MiraiGo-Template
 
-version 2
+> v2 版本
 
-WIP
+## TODO
