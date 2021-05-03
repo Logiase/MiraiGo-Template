@@ -66,6 +66,7 @@ func GenRandomDevice() {
 	b, _ := utils.FileExist("./device.json")
 	if b {
 		logger.Warn("device.json exists, will not write device to file")
+		return
 	}
 	err := ioutil.WriteFile("device.json", client.SystemDeviceInfo.ToJson(), os.FileMode(0755))
 	if err != nil {
