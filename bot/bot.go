@@ -76,6 +76,7 @@ func GenRandomDevice() {
 
 // Login 登录
 func Login() {
+	Instance.AllowSlider = true
 	resp, err := Instance.Login()
 	console := bufio.NewReader(os.Stdin)
 
@@ -147,14 +148,11 @@ func Login() {
 				}
 
 			case client.SliderNeededError:
-				if client.SystemDeviceInfo.Protocol == client.AndroidPhone {
-					fmt.Println("Android Phone Protocol DO NOT SUPPORT Slide verify")
-					fmt.Println("please use other protocol")
-					os.Exit(2)
-				}
-				Instance.AllowSlider = false
-				Instance.Disconnect()
-				resp, err = Instance.Login()
+				fmt.Println("please look at the doc https://github.com/Mrs4s/go-cqhttp/blob/master/docs/slider.md to get ticket")
+				fmt.Printf("open %s to get ticket\n", resp.VerifyUrl)
+				fmt.Println("please input ticket:")
+				text, _ = console.ReadString('\n')
+				resp, err = Instance.SubmitTicket(strings.ReplaceAll(text, "\n", ""))
 				continue
 
 			case client.OtherLoginError, client.UnknownLoginError:
