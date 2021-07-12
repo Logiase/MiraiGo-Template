@@ -4,14 +4,16 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"github.com/tuotoo/qrcode"
+	asc2art "github.com/yinghau76/go-ascii-art"
 	"image"
 	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
+	"time"
 
-	asc2art "github.com/yinghau76/go-ascii-art"
-
+	qrcodeTerminal "github.com/Baozisoftware/qrcode-terminal-go"
 	"github.com/Logiase/MiraiGo-Template/config"
 	"github.com/Logiase/MiraiGo-Template/utils"
 	"github.com/Mrs4s/MiraiGo/client"
@@ -34,24 +36,33 @@ var logger = logrus.WithField("bot", "internal")
 // 使用 config.GlobalConfig 初始化账号
 // 使用 ./device.json 初始化设备信息
 func Init() {
-	Instance = &Bot{
-		client.NewClient(
-			config.GlobalConfig.GetInt64("bot.account"),
-			config.GlobalConfig.GetString("bot.password"),
-		),
-		false,
+	account := config.GlobalConfig.GetInt64("bot.account")
+	password := config.GlobalConfig.GetString("bot.password")
+
+	InitBot(account, password)
+
+	deviceJson := utils.ReadFile("./device.json")
+	if deviceJson == nil {
+		logger.Fatal("can not read ./device.json")
 	}
-	err := client.SystemDeviceInfo.ReadJson(utils.ReadFile("./device.json"))
+	err := client.SystemDeviceInfo.ReadJson(deviceJson)
 	if err != nil {
-		logger.WithError(err).Panic("device.json error")
+		logger.WithError(err).Fatal("read device.json error")
 	}
 }
 
 // InitBot 使用 account password 进行初始化账号
 func InitBot(account int64, password string) {
-	Instance = &Bot{
-		client.NewClient(account, password),
-		false,
+	if account == 0 {
+		Instance = &Bot{
+			client.NewClientEmpty(),
+			false,
+		}
+	} else {
+		Instance = &Bot{
+			client.NewClient(account, password),
+			false,
+		}
 	}
 }
 
@@ -74,41 +85,141 @@ func GenRandomDevice() {
 	}
 }
 
+func qrcodeLogin() error {
+	rsp, err := Instance.FetchQRCode()
+	if err != nil {
+		return err
+	}
+	fi, err := qrcode.Decode(bytes.NewReader(rsp.ImageData))
+	if err != nil {
+		return err
+	}
+	_ = ioutil.WriteFile("qrcode.png", rsp.ImageData, 0o644)
+	defer func() { _ = os.Remove("qrcode.png") }()
+	logger.Infof("请使用手机QQ扫描二维码 (qrcode.png) : ")
+	time.Sleep(time.Second)
+	qrcodeTerminal.New().Get(fi.Content).Print()
+	s, err := Instance.QueryQRCodeStatus(rsp.Sig)
+	if err != nil {
+		return err
+	}
+	prevState := s.State
+	for {
+		time.Sleep(time.Second)
+		s, _ = Instance.QueryQRCodeStatus(rsp.Sig)
+		if s == nil {
+			continue
+		}
+		if prevState == s.State {
+			continue
+		}
+		prevState = s.State
+		switch s.State {
+		case client.QRCodeCanceled:
+			logger.Info("扫码被用户取消.")
+			os.Exit(1)
+		case client.QRCodeTimeout:
+			logger.Info("二维码过期")
+			os.Exit(1)
+		case client.QRCodeWaitingForConfirm:
+			logger.Infof("扫码成功, 请在手机端确认登录.")
+		case client.QRCodeConfirmed:
+			res, err := Instance.QRCodeLogin(s.LoginInfo)
+			if err != nil {
+				return err
+			}
+			return login(res)
+		case client.QRCodeImageFetch, client.QRCodeWaitingForScan:
+			// ignore
+		}
+	}
+}
+
 // Login 登录
 func Login() {
 	Instance.AllowSlider = true
-	resp, err := Instance.Login()
+	if Instance.Uin == 0 {
+		logger.Info("未指定账号密码，请扫码登陆")
+		err := qrcodeLogin()
+		if err != nil {
+			logger.Fatal("login failed: %v", err)
+		} else {
+			logger.Infof("bot login: %s", Instance.Nickname)
+		}
+	} else {
+		logger.Info("使用帐号密码登陆")
+		resp, err := Instance.Login()
+		if err != nil {
+			logger.Fatalf("login failed: %v", err)
+		}
+
+		err = login(resp)
+
+		if err != nil {
+			logger.Fatal("login failed: %v", err)
+		} else {
+			logger.Infof("bot login: %s", Instance.Nickname)
+		}
+	}
+}
+
+func login(resp *client.LoginResponse) error {
 	console := bufio.NewReader(os.Stdin)
+	var err error
 
 	for {
 		if err != nil {
-			logger.WithError(err).Fatal("unable to login")
+			return err
+		}
+		if resp.Success {
+			return nil
 		}
 
 		var text string
-		if !resp.Success {
-			switch resp.Error {
+		switch resp.Error {
 
-			case client.NeedCaptcha:
-				img, _, _ := image.Decode(bytes.NewReader(resp.CaptchaImage))
-				fmt.Println(asc2art.New("image", img).Art)
-				fmt.Print("please input captcha: ")
-				text, _ := console.ReadString('\n')
-				resp, err = Instance.SubmitCaptcha(strings.ReplaceAll(text, "\n", ""), resp.CaptchaSign)
-				continue
+		case client.NeedCaptcha:
+			img, _, _ := image.Decode(bytes.NewReader(resp.CaptchaImage))
+			fmt.Println(asc2art.New("image", img).Art)
+			fmt.Print("please input captcha: ")
+			text, _ := console.ReadString('\n')
+			resp, err = Instance.SubmitCaptcha(strings.ReplaceAll(text, "\n", ""), resp.CaptchaSign)
+			continue
 
-			case client.UnsafeDeviceError:
-				fmt.Printf("device lock -> %v\n", resp.VerifyUrl)
-				os.Exit(4)
+		case client.UnsafeDeviceError:
+			fmt.Printf("device lock -> %v\n", resp.VerifyUrl)
+			os.Exit(4)
 
-			case client.SMSNeededError:
-				fmt.Println("device lock enabled, Need SMS Code")
-				fmt.Printf("Send SMS to %s ? (yes)", resp.SMSPhone)
-				t, _ := console.ReadString('\n')
-				t = strings.TrimSpace(t)
-				if t != "yes" {
-					os.Exit(2)
-				}
+		case client.SMSNeededError:
+			fmt.Println("device lock enabled, Need SMS Code")
+			fmt.Printf("Send SMS to %s ? (yes)", resp.SMSPhone)
+			t, _ := console.ReadString('\n')
+			t = strings.TrimSpace(t)
+			if t != "yes" {
+				os.Exit(2)
+			}
+			if !Instance.RequestSMS() {
+				logger.Warnf("unable to request SMS Code")
+				os.Exit(2)
+			}
+			logger.Warn("please input SMS Code: ")
+			text, _ = console.ReadString('\n')
+			resp, err = Instance.SubmitSMS(strings.ReplaceAll(strings.ReplaceAll(text, "\n", ""), "\r", ""))
+			continue
+
+		case client.TooManySMSRequestError:
+			fmt.Printf("too many SMS request, please try later.\n")
+			os.Exit(6)
+
+		case client.SMSOrVerifyNeededError:
+			fmt.Println("device lock enabled, choose way to verify:")
+			fmt.Println("1. Send SMS Code to ", resp.SMSPhone)
+			fmt.Println("2. Scan QR Code")
+			fmt.Print("input (1,2):")
+			text, _ = console.ReadString('\n')
+			text = strings.TrimSpace(text)
+			switch text {
+			case "1":
 				if !Instance.RequestSMS() {
 					logger.Warnf("unable to request SMS Code")
 					os.Exit(2)
@@ -117,54 +228,36 @@ func Login() {
 				text, _ = console.ReadString('\n')
 				resp, err = Instance.SubmitSMS(strings.ReplaceAll(strings.ReplaceAll(text, "\n", ""), "\r", ""))
 				continue
-
-			case client.TooManySMSRequestError:
-				fmt.Printf("too many SMS request, please try later.\n")
-				os.Exit(6)
-
-			case client.SMSOrVerifyNeededError:
-				fmt.Println("device lock enabled, choose way to verify:")
-				fmt.Println("1. Send SMS Code to ", resp.SMSPhone)
-				fmt.Println("2. Scan QR Code")
-				fmt.Print("input (1,2):")
-				text, _ = console.ReadString('\n')
-				text = strings.TrimSpace(text)
-				switch text {
-				case "1":
-					if !Instance.RequestSMS() {
-						fmt.Println("unable to request SMS Code")
-						os.Exit(2)
-					}
-					fmt.Print("please input SMS Code: ")
-					text, _ = console.ReadString('\n')
-					resp, err = Instance.SubmitSMS(strings.ReplaceAll(strings.ReplaceAll(text, "\n", ""), "\r", ""))
-					continue
-				case "2":
-					fmt.Printf("device lock -> %v\n", resp.VerifyUrl)
-					os.Exit(2)
-				default:
-					fmt.Println("invalid input")
-					os.Exit(2)
-				}
-
-			case client.SliderNeededError:
-				fmt.Println("please look at the doc https://github.com/Mrs4s/go-cqhttp/blob/master/docs/slider.md to get ticket")
-				fmt.Printf("open %s to get ticket\n", resp.VerifyUrl)
-				fmt.Println("please input ticket:")
-				text, _ = console.ReadString('\n')
-				resp, err = Instance.SubmitTicket(strings.ReplaceAll(text, "\n", ""))
-				continue
-
-			case client.OtherLoginError, client.UnknownLoginError:
-				logger.Fatalf("login failed: %v", resp.ErrorMessage)
+			case "2":
+				fmt.Printf("device lock -> %v\n", resp.VerifyUrl)
+				os.Exit(2)
+			default:
+				fmt.Println("invalid input")
+				os.Exit(2)
 			}
 
+		case client.SliderNeededError:
+			// code below copyright by https://github.com/Mrs4s/go-cqhttp
+			fmt.Println("登录需要滑条验证码. ")
+			fmt.Println("请参考文档 -> https://docs.go-cqhttp.org/faq/slider.html <- 进行处理")
+			fmt.Println("1. 自行抓包并获取 Ticket 输入.")
+			fmt.Println("2. 使用手机QQ扫描二维码登入. (推荐)")
+			text, _ = console.ReadString('\n')
+			if strings.Contains(text, "1") {
+				fmt.Printf("\n请用浏览器打开 -> %v <- 并获取Ticket.\n", resp.VerifyUrl)
+				fmt.Printf("请输入Ticket： (Enter 提交)")
+				text, _ := console.ReadString('\n')
+				resp, err = Instance.SubmitTicket(strings.ReplaceAll(text, "\n", ""))
+				continue
+			}
+			Instance.Disconnect()
+			Instance.QQClient = client.NewClientEmpty()
+			return qrcodeLogin()
+		case client.OtherLoginError, client.UnknownLoginError:
+			logger.Fatalf("login failed: %v", resp.ErrorMessage)
+			os.Exit(3)
 		}
-
-		break
 	}
-
-	logger.Infof("bot login: %s", Instance.Nickname)
 }
 
 // RefreshList 刷新联系人
