@@ -117,7 +117,7 @@ go get -u
 
  - [logiase.autoreply](https://github.com/Logiase/MiraiGo-module-autoreply)
  按照收到的消息进行回复
- 
+
 ## 进阶内容 
 
 ### Docker 支持
@@ -130,7 +130,7 @@ go get -u
     核心协议库
  - [viper](https://github.com/spf13/viper)
     用于解析配置文件，同时可监听配置文件的修改
- - [logrus](github.com/sirupsen/logrus)
+ - [logrus](https://github.com/sirupsen/logrus)
     功能丰富的Logger
- - [asciiart](github.com/yinghau76/go-ascii-art)
+ - [asciiart](https://github.com/yinghau76/go-ascii-art)
     用于在console显示图形验证码
