@@ -7,7 +7,6 @@ require (
 	github.com/Mrs4s/MiraiGo v0.0.0-20210518070025-f145000ac0ef
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/google/martian v2.1.0+incompatible
 	github.com/gopherjs/gopherjs v0.0.0-20210202160940-bed99a852dfe // indirect
 	github.com/jonboulle/clockwork v0.2.2 // indirect
 	github.com/json-iterator/go v1.1.11 // indirect

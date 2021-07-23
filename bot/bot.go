@@ -3,7 +3,9 @@ package bot
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
+	"github.com/Mrs4s/MiraiGo/binary"
 	"github.com/tuotoo/qrcode"
 	asc2art "github.com/yinghau76/go-ascii-art"
 	"image"
@@ -20,11 +22,64 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+var reloginLock = new(sync.Mutex)
+
+const sessionToken = "session.token"
+
 // Bot 全局 Bot
 type Bot struct {
 	*client.QQClient
 
-	start bool
+	start    bool
+	isQRCode bool
+}
+
+func (bot *Bot) saveToken() {
+	_ = ioutil.WriteFile(sessionToken, bot.GenToken(), 0o677)
+}
+func (bot *Bot) clearToken() {
+	os.Remove(sessionToken)
+}
+
+func (bot *Bot) getToken() ([]byte, error) {
+	return ioutil.ReadFile(sessionToken)
+}
+
+// ReLogin 掉线时可以尝试使用会话缓存重新登陆，只允许在OnDisconnected中调用
+func (bot *Bot) ReLogin(e *client.ClientDisconnectedEvent) error {
+	reloginLock.Lock()
+	defer reloginLock.Unlock()
+	if bot.Online {
+		return nil
+	}
+	logger.Warnf("Bot已离线: %v", e.Message)
+	logger.Warnf("尝试重连...")
+	token, err := bot.getToken()
+	if err == nil {
+		err = bot.TokenLogin(token)
+		if err == nil {
+			bot.saveToken()
+			return nil
+		}
+	}
+	logger.Warnf("快速重连失败: %v", err)
+	if bot.isQRCode {
+		logger.Errorf("快速重连失败, 扫码登录无法恢复会话.")
+		return errors.New("qrcode login relogin failed")
+	}
+	logger.Warnf("快速重连失败, 尝试普通登录. 这可能是因为其他端强行T下线导致的.")
+	time.Sleep(time.Second)
+
+	resp, err := bot.Login()
+	if err != nil {
+		logger.Errorf("登录时发生致命错误: %v", err)
+		return err
+	}
+	err = login(resp)
+	if err == nil {
+		bot.saveToken()
+	}
+	return err
 }
 
 // Instance Bot 实例
@@ -55,13 +110,12 @@ func Init() {
 func InitBot(account int64, password string) {
 	if account == 0 {
 		Instance = &Bot{
-			client.NewClientEmpty(),
-			false,
+			QQClient: client.NewClientEmpty(),
+			isQRCode: true,
 		}
 	} else {
 		Instance = &Bot{
-			client.NewClient(account, password),
-			false,
+			QQClient: client.NewClient(account, password),
 		}
 	}
 }
@@ -138,6 +192,32 @@ func qrcodeLogin() error {
 // Login 登录
 func Login() {
 	Instance.AllowSlider = true
+	if ok, _ := utils.FileExist(sessionToken); ok {
+		token, err := Instance.getToken()
+		if err != nil {
+			goto NormalLogin
+		}
+		if Instance.Uin != 0 {
+			r := binary.NewReader(token)
+			sessionUin := r.ReadInt64()
+			if sessionUin != Instance.Uin {
+				logger.Warnf("QQ号(%v)与会话缓存内的QQ号(%v)不符，将清除会话缓存", Instance.Uin, sessionUin)
+				Instance.clearToken()
+				goto NormalLogin
+			}
+		}
+		if err = Instance.TokenLogin(token); err != nil {
+			Instance.clearToken()
+			logger.Warnf("恢复会话失败: %v , 尝试使用正常流程登录.", err)
+			time.Sleep(time.Second)
+		} else {
+			Instance.saveToken()
+			logger.Debug("恢复会话成功")
+			return
+		}
+	}
+
+NormalLogin:
 	if Instance.Uin == 0 {
 		logger.Info("未指定账号密码，请扫码登陆")
 		err := qrcodeLogin()
@@ -161,6 +241,7 @@ func Login() {
 			logger.Infof("bot login: %s", Instance.Nickname)
 		}
 	}
+	Instance.saveToken()
 }
 
 func login(resp *client.LoginResponse) error {
