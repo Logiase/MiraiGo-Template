@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	asc2art "github.com/yinghau76/go-ascii-art"
 
@@ -76,6 +77,10 @@ func GenRandomDevice() {
 
 // Login 登录
 func Login() {
+	if config.GlobalConfig.GetBool("useqrcode") {
+		QRCodeLogin()
+		return
+	}
 	Instance.AllowSlider = true
 	resp, err := Instance.Login()
 	console := bufio.NewReader(os.Stdin)
@@ -165,6 +170,61 @@ func Login() {
 	}
 
 	logger.Infof("bot login: %s", Instance.Nickname)
+}
+
+// QRCodeLogin 二维码登陆
+func QRCodeLogin() {
+	QRCodeResp := fetchQRCode()
+	QRCodeScanned := false
+	for {
+		time.Sleep(time.Second)
+		QRCodeResp, err := Instance.QueryQRCodeStatus(QRCodeResp.Sig)
+		if err != nil {
+			logger.Fatalln("QR Code login fatal: unable to query QR Code status, error: ", err)
+			os.Exit(1)
+		}
+		switch QRCodeResp.State {
+		case client.QRCodeWaitingForScan:
+			continue
+		case client.QRCodeWaitingForConfirm:
+			if !QRCodeScanned {
+				fmt.Println("QR Code scanned,please confirm on your phone.")
+				QRCodeScanned = true
+			}
+			continue
+		case client.QRCodeTimeout:
+			fmt.Println("QR Code timeout,refreshing...")
+			QRCodeResp = fetchQRCode()
+			continue
+		case client.QRCodeConfirmed:
+			resp, err := Instance.QRCodeLogin(QRCodeResp.LoginInfo)
+			if err != nil {
+				logger.WithError(err).Fatal("unable to login by QR Code")
+			}
+			if !resp.Success {
+				logger.Fatalln("QR Code login fatal: unknown error: ", resp.ErrorMessage)
+				os.Exit(1)
+			}
+			fmt.Println("QR Code login succeed")
+			break
+		case client.QRCodeCanceled:
+			logger.Fatalln("QR Code login fatal: QR Code canceled")
+			os.Exit(1)
+		}
+		break
+	}
+}
+
+func fetchQRCode() *client.QRCodeLoginResponse {
+	QRCodeResp, err := Instance.FetchQRCode()
+	if err != nil {
+		logger.Fatalln("QR Code login fatal: unable to fetch QR Code, err: ", err)
+		os.Exit(1)
+	}
+	img, _, _ := image.Decode(bytes.NewReader(QRCodeResp.ImageData))
+	qr := utils.NewQRCode2ConsoleWithImage(img)
+	qr.Output()
+	return QRCodeResp
 }
 
 // RefreshList 刷新联系人

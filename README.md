@@ -134,3 +134,5 @@ go get -u
     功能丰富的Logger
  - [asciiart](https://github.com/yinghau76/go-ascii-art)
     用于在console显示图形验证码
+ - [qrcode2console](https://github.com/Han-Ya-Jun/qrcode2console)
+    用于在console显示登陆二维码
