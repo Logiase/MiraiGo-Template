@@ -208,6 +208,9 @@ func Login() {
 		}
 		if err = Instance.TokenLogin(token); err != nil {
 			Instance.clearToken()
+			Instance.Disconnect()
+			Instance.Release()
+			Instance.QQClient = client.NewClientEmpty()
 			logger.Warnf("恢复会话失败: %v , 尝试使用正常流程登录.", err)
 			time.Sleep(time.Second)
 		} else {
@@ -244,8 +247,31 @@ NormalLogin:
 	Instance.saveToken()
 }
 
+var console = bufio.NewReader(os.Stdin)
+
+var readLine = func() (str string) {
+	str, _ = console.ReadString('\n')
+	str = strings.TrimSpace(str)
+	return
+}
+
+var readLineTimeout = func(t time.Duration, defaultV string) (str string) {
+	r := make(chan string)
+	go func() {
+		select {
+		case r <- readLine():
+		case <-time.After(t):
+		}
+	}()
+	str = defaultV
+	select {
+	case str = <-r:
+	case <-time.After(t):
+	}
+	return
+}
+
 func login(resp *client.LoginResponse) error {
-	console := bufio.NewReader(os.Stdin)
 	var err error
 
 	for {
@@ -258,85 +284,66 @@ func login(resp *client.LoginResponse) error {
 
 		var text string
 		switch resp.Error {
-
-		case client.NeedCaptcha:
-			img, _, _ := image.Decode(bytes.NewReader(resp.CaptchaImage))
-			fmt.Println(asc2art.New("image", img).Art)
-			fmt.Print("please input captcha: ")
-			text, _ := console.ReadString('\n')
-			resp, err = Instance.SubmitCaptcha(strings.ReplaceAll(text, "\n", ""), resp.CaptchaSign)
-			continue
-
-		case client.UnsafeDeviceError:
-			fmt.Printf("device lock -> %v\n", resp.VerifyUrl)
-			os.Exit(4)
-
-		case client.SMSNeededError:
-			fmt.Println("device lock enabled, Need SMS Code")
-			fmt.Printf("Send SMS to %s ? (yes)", resp.SMSPhone)
-			t, _ := console.ReadString('\n')
-			t = strings.TrimSpace(t)
-			if t != "yes" {
-				os.Exit(2)
-			}
-			if !Instance.RequestSMS() {
-				logger.Warnf("unable to request SMS Code")
-				os.Exit(2)
-			}
-			logger.Warn("please input SMS Code: ")
-			text, _ = console.ReadString('\n')
-			resp, err = Instance.SubmitSMS(strings.ReplaceAll(strings.ReplaceAll(text, "\n", ""), "\r", ""))
-			continue
-
-		case client.TooManySMSRequestError:
-			fmt.Printf("too many SMS request, please try later.\n")
-			os.Exit(6)
-
-		case client.SMSOrVerifyNeededError:
-			fmt.Println("device lock enabled, choose way to verify:")
-			fmt.Println("1. Send SMS Code to ", resp.SMSPhone)
-			fmt.Println("2. Scan QR Code")
-			fmt.Print("input (1,2):")
-			text, _ = console.ReadString('\n')
-			text = strings.TrimSpace(text)
-			switch text {
-			case "1":
-				if !Instance.RequestSMS() {
-					logger.Warnf("unable to request SMS Code")
-					os.Exit(2)
-				}
-				logger.Warn("please input SMS Code: ")
-				text, _ = console.ReadString('\n')
-				resp, err = Instance.SubmitSMS(strings.ReplaceAll(strings.ReplaceAll(text, "\n", ""), "\r", ""))
-				continue
-			case "2":
-				fmt.Printf("device lock -> %v\n", resp.VerifyUrl)
-				os.Exit(2)
-			default:
-				fmt.Println("invalid input")
-				os.Exit(2)
-			}
-
 		case client.SliderNeededError:
 			// code below copyright by https://github.com/Mrs4s/go-cqhttp
-			fmt.Println("登录需要滑条验证码. ")
-			fmt.Println("请参考文档 -> https://docs.go-cqhttp.org/faq/slider.html <- 进行处理")
-			fmt.Println("1. 自行抓包并获取 Ticket 输入.")
-			fmt.Println("2. 使用手机QQ扫描二维码登入. (推荐)")
-			text, _ = console.ReadString('\n')
-			if strings.Contains(text, "1") {
-				fmt.Printf("\n请用浏览器打开 -> %v <- 并获取Ticket.\n", resp.VerifyUrl)
-				fmt.Printf("请输入Ticket： (Enter 提交)")
-				text, _ := console.ReadString('\n')
-				resp, err = Instance.SubmitTicket(strings.ReplaceAll(text, "\n", ""))
-				continue
-			}
+			logger.Warn("登录需要滑条验证码, 请使用手机QQ扫描二维码以继续登录.")
 			Instance.Disconnect()
+			Instance.Release()
 			Instance.QQClient = client.NewClientEmpty()
 			return qrcodeLogin()
-		case client.OtherLoginError, client.UnknownLoginError:
-			logger.Fatalf("login failed: %v", resp.ErrorMessage)
-			os.Exit(3)
+		case client.NeedCaptcha:
+			logger.Warn("登录需要验证码.")
+			img, _, _ := image.Decode(bytes.NewReader(resp.CaptchaImage))
+			fmt.Println(asc2art.New("image", img).Art)
+			logger.Warn("请输入验证码 (captcha.jpg)： (Enter 提交)")
+			text = readLine()
+			resp, err = Instance.SubmitCaptcha(text, resp.CaptchaSign)
+			continue
+		case client.SMSNeededError:
+			logger.Warnf("账号已开启设备锁, 按 Enter 向手机 %v 发送短信验证码.", resp.SMSPhone)
+			readLine()
+			if !Instance.RequestSMS() {
+				logger.Warnf("发送验证码失败，可能是请求过于频繁.")
+				return errors.New("sms send error")
+			}
+			logger.Warn("请输入短信验证码： (Enter 提交)")
+			text = readLine()
+			resp, err = Instance.SubmitSMS(text)
+			continue
+		case client.SMSOrVerifyNeededError:
+			logger.Warn("账号已开启设备锁，请选择验证方式:")
+			logger.Warnf("1. 向手机 %v 发送短信验证码", resp.SMSPhone)
+			logger.Warn("2. 使用手机QQ扫码验证.")
+			logger.Warn("请输入(1 - 2) (将在10秒后自动选择2)：")
+			text = readLineTimeout(time.Second*10, "2")
+			if strings.Contains(text, "1") {
+				if !Instance.RequestSMS() {
+					logger.Warnf("发送验证码失败，可能是请求过于频繁.")
+					return errors.New("sms send error")
+				}
+				logger.Warn("请输入短信验证码： (Enter 提交)")
+				text = readLine()
+				resp, err = Instance.SubmitSMS(text)
+				continue
+			}
+			fallthrough
+		case client.UnsafeDeviceError:
+			logger.Warnf("账号已开启设备锁，请前往 -> %v <- 验证后重启Bot.", resp.VerifyUrl)
+			logger.Infof("按 Enter 或等待 5s 后继续....")
+			readLineTimeout(time.Second*5, "")
+			os.Exit(0)
+		case client.OtherLoginError, client.UnknownLoginError, client.TooManySMSRequestError:
+			msg := resp.ErrorMessage
+			if strings.Contains(msg, "版本") {
+				msg = "密码错误或账号被冻结"
+			}
+			if strings.Contains(msg, "冻结") {
+				logger.Fatalf("账号被冻结")
+			}
+			logger.Warnf("登录失败: %v", msg)
+			logger.Infof("按 Enter 或等待 5s 后继续....")
+			readLineTimeout(time.Second*5, "")
+			os.Exit(0)
 		}
 	}
 }
