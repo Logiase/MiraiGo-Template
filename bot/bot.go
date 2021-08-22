@@ -180,6 +180,7 @@ func loginResponseProcessor(res *client.LoginResponse) error {
 		case client.SliderNeededError:
 			logger.Warnf("登录需要滑条验证码, 请使用手机QQ扫描二维码以继续登录.")
 			Instance.Disconnect()
+			Instance.Release()
 			Instance.QQClient = client.NewClientEmpty()
 			return QrcodeLogin()
 		case client.NeedCaptcha:
