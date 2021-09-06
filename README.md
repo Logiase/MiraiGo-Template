@@ -28,6 +28,8 @@ bot:
   password: example
 ```
 
+如果删除账号信息的话将会使用扫码登录，短时间内再次启动将会使用token来快速恢复，恢复失败才会再次提示使用扫码登录。如果需要切换登录的qq，请删除 session.token 文件。
+
 ## Module 配置
 
 module参考[log.go](./modules/logging/log.go)
