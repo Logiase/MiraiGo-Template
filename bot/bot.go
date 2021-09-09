@@ -3,6 +3,7 @@ package bot
 import (
 	"bufio"
 	"bytes"
+	"github.com/Mrs4s/MiraiGo/binary"
 	"github.com/pkg/errors"
 	_ "image/png"
 	"io/ioutil"
@@ -76,8 +77,62 @@ func GenRandomDevice() {
 	}
 }
 
+// SaveToken 会话缓存
+func SaveToken() {
+	AccountToken := Instance.GenToken()
+	_ = os.WriteFile("session.token", AccountToken, 0o644)
+}
+
 // Login 登录
 func Login() error {
+	// 存在token缓存的情况快速恢复会话
+	if exist, _ := utils.FileExist("./session.token"); exist {
+		logger.Infof("检测到会话缓存, 尝试快速恢复登录")
+		token, err := os.ReadFile("./session.token")
+		if err == nil {
+			r := binary.NewReader(token)
+			cu := r.ReadInt64()
+			if Instance.Uin != 0 {
+				if cu != Instance.Uin {
+					logger.Warnf("警告: 配置文件内的QQ号 (%v) 与会话缓存内的QQ号 (%v) 不相同", Instance.Uin, cu)
+					logger.Warnf("1. 使用会话缓存继续.")
+					logger.Warnf("2. 删除会话缓存并退出程序.")
+					logger.Warnf("请选择: (5秒后自动选1)")
+					text := readLineTimeout(time.Second*5, "1")
+					if text == "2" {
+						_ = os.Remove("session.token")
+						logger.Infof("会话缓存已删除.")
+						os.Exit(0)
+					}
+				}
+			}
+			if err = Instance.TokenLogin(token); err != nil {
+				_ = os.Remove("session.token")
+				logger.Warnf("恢复会话失败: %v , 尝试使用正常流程登录.", err)
+				time.Sleep(time.Second)
+				Instance.Disconnect()
+				Instance.Release()
+				Instance.QQClient = client.NewClient(config.GlobalConfig.GetInt64("bot.account"),
+					config.GlobalConfig.GetString("bot.password"))
+			} else {
+				logger.Infof("快速恢复登录成功")
+				return nil
+			}
+		}
+	}
+	// 不存在token缓存 走正常流程
+	print(Instance.Uin)
+	if Instance.Uin != 0 {
+		// 有账号就先普通登录
+		return CommonLogin()
+	} else {
+		// 没有账号就扫码登录
+		return QrcodeLogin()
+	}
+}
+
+// CommonLogin 普通账号密码登录
+func CommonLogin() error {
 	res, err := Instance.Login()
 	if err != nil {
 		return err
