@@ -35,7 +35,7 @@ func main() {
 	bot.RefreshList()
 
 	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt, os.Kill)
+	signal.Notify(ch, os.Interrupt)
 	<-ch
 	bot.Stop()
 }
