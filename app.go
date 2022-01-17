@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	utils.WriteLogToFS()
+	utils.WriteLogToFS(utils.LogInfoLevel, utils.LogWithStack)
 	config.Init()
 }
 
