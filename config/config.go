@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
@@ -25,5 +26,13 @@ func Init() {
 	err := GlobalConfig.ReadInConfig()
 	if err != nil {
 		logrus.WithField("config", "GlobalConfig").WithError(err).Panicf("unable to read global config")
+	}
+}
+
+func InitWithContent(configJSONContent []byte) {
+	GlobalConfig.SetConfigType("json")
+	err := GlobalConfig.ReadConfig(bytes.NewReader(configJSONContent))
+	if err != nil {
+		panic(err)
 	}
 }
