@@ -119,6 +119,12 @@ go get -u
 
  - [logiase.autoreply](https://github.com/Logiase/MiraiGo-module-autoreply)
  按照收到的消息进行回复
+ - [aimerneige.test.echo](https://github.com/aimerneige/MiraiGo-module-echo)
+ 简单实现 echo 功能。（简单文本处理）
+ - [aimerneige.test.morning](https://github.com/aimerneige/MiraiGo-module-morning)
+ 在 UTC 时间 12:00 AM（北京时间早上 8 点）向全部的群发送“早上好啊！”。（定时任务）
+ - [aimerneige.test.setu](https://github.com/aimerneige/MiraiGo-module-setu)
+ 在群聊中接受到消息 “setu” 时在群内发送色图。（图片处理）
 
 ## 进阶内容 
 
