@@ -7,7 +7,6 @@ import (
 	"github.com/Mrs4s/MiraiGo/binary"
 	"github.com/pkg/errors"
 	_ "image/png"
-	"io/ioutil"
 	"os"
 	"strings"
 	"sync"
@@ -97,7 +96,7 @@ func GenRandomDevice() {
 		logger.Warn("device.json exists, will not write device to file")
 		return
 	}
-	err := ioutil.WriteFile("device.json", client.SystemDeviceInfo.ToJson(), os.FileMode(0755))
+	err := os.WriteFile("device.json", client.SystemDeviceInfo.ToJson(), os.FileMode(0755))
 	if err != nil {
 		logger.WithError(err).Errorf("unable to write device.json")
 	}
@@ -125,12 +124,12 @@ func Login() error {
 		logger.Infof("检测到会话缓存, 尝试快速恢复登录")
 		token, err := os.ReadFile("./session.token")
 		if err != nil {
-			return errors.Errorf("failed to read token from file with err:%w", err)
+			return fmt.Errorf("failed to read token from file with err: %w", err)
 		}
 		tokenData = token
 	}
 	fmt.Println(Instance.Uin)
-	var loginMethodValue = config.GlobalConfig.GetString("bot.loginmethod")
+	var loginMethodValue = config.GlobalConfig.GetString("bot.login-method")
 	return LoginWithOption(LoginOption{
 		LoginMethod:              LoginMethod(loginMethodValue),
 		Token:                    tokenData,

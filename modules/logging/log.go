@@ -121,27 +121,46 @@ func logDisconnect(event *client.ClientDisconnectedEvent) {
 }
 
 func registerLog(b *bot.Bot) {
-	b.OnGroupMessageRecalled(func(qqClient *client.QQClient, event *client.GroupMessageRecalledEvent) {
+	b.GroupMessageRecalledEvent.Subscribe(func(qqClient *client.QQClient, event *client.GroupMessageRecalledEvent) {
 		logGroupMessageRecallEvent(event)
 	})
+	// Deprecated: This function is designed to make the framework compatible with the old plug-in, and the newly developed plug-in should no longer use this method
+	//b.OnGroupMessageRecalled(func(qqClient *client.QQClient, event *client.GroupMessageRecalledEvent) {
+	//	logGroupMessageRecallEvent(event)
+	//})
 
-	b.OnGroupMessage(func(qqClient *client.QQClient, groupMessage *message.GroupMessage) {
+	b.GroupMessageEvent.Subscribe(func(qqClient *client.QQClient, groupMessage *message.GroupMessage) {
 		logGroupMessage(groupMessage)
 	})
+	//b.OnGroupMessage(func(qqClient *client.QQClient, groupMessage *message.GroupMessage) {
+	//	logGroupMessage(groupMessage)
+	//})
 
-	b.OnGroupMuted(func(qqClient *client.QQClient, event *client.GroupMuteEvent) {
+	b.GroupMuteEvent.Subscribe(func(qqClient *client.QQClient, event *client.GroupMuteEvent) {
 		logGroupMuteEvent(event)
 	})
+	//b.OnGroupMuted(func(qqClient *client.QQClient, event *client.GroupMuteEvent) {
+	//	logGroupMuteEvent(event)
+	//})
 
-	b.OnPrivateMessage(func(qqClient *client.QQClient, privateMessage *message.PrivateMessage) {
+	b.PrivateMessageEvent.Subscribe(func(qqClient *client.QQClient, privateMessage *message.PrivateMessage) {
 		logPrivateMessage(privateMessage)
 	})
+	//b.OnPrivateMessage(func(qqClient *client.QQClient, privateMessage *message.PrivateMessage) {
+	//	logPrivateMessage(privateMessage)
+	//})
 
-	b.OnFriendMessageRecalled(func(qqClient *client.QQClient, event *client.FriendMessageRecalledEvent) {
+	b.FriendMessageRecalledEvent.Subscribe(func(qqClient *client.QQClient, event *client.FriendMessageRecalledEvent) {
 		logFriendMessageRecallEvent(event)
 	})
+	//b.OnFriendMessageRecalled(func(qqClient *client.QQClient, event *client.FriendMessageRecalledEvent) {
+	//	logFriendMessageRecallEvent(event)
+	//})
 
-	b.OnDisconnected(func(qqClient *client.QQClient, event *client.ClientDisconnectedEvent) {
+	b.DisconnectedEvent.Subscribe(func(qqClient *client.QQClient, event *client.ClientDisconnectedEvent) {
 		logDisconnect(event)
 	})
+	//b.OnDisconnected(func(qqClient *client.QQClient, event *client.ClientDisconnectedEvent) {
+	//	logDisconnect(event)
+	//})
 }
