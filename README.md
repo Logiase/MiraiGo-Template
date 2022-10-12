@@ -98,7 +98,7 @@ func TestGenDevice(t *testing.T) {
 
 如果你克隆本项目, 请首先更新项目依赖, 同步到协议库最新版本, 否则可能出现某些意外的bug ( 或产生新的bug )
 
-```go
+```shell
 go get -u
 ```
 
