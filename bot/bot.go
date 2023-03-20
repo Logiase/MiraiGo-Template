@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
-	"github.com/Mrs4s/MiraiGo/binary"
-	"github.com/pkg/errors"
 	_ "image/png"
 	"os"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/Mrs4s/MiraiGo/binary"
+	"github.com/pkg/errors"
 
 	qrcodeTerminal "github.com/Baozisoftware/qrcode-terminal-go"
 	"github.com/tuotoo/qrcode"
@@ -55,10 +56,13 @@ func InitWithOption(option InitOption) error {
 		),
 		start: false,
 	}
-	err := client.SystemDeviceInfo.ReadJson(option.DeviceJSONContent)
+
+	device := new(client.DeviceInfo)
+	err := device.ReadJson(option.DeviceJSONContent)
 	if err != nil {
 		return errors.Errorf("failed to apply device.json with err:%s", err)
 	}
+	Instance.UseDevice(device)
 	return nil
 }
 
@@ -85,18 +89,24 @@ func InitBot(account int64, password string) {
 
 // UseDevice 使用 device 进行初始化设备信息
 func UseDevice(device []byte) error {
-	return client.SystemDeviceInfo.ReadJson(device)
+	deviceInfo := new(client.DeviceInfo)
+	err := deviceInfo.ReadJson(device)
+	if err != nil {
+		return err
+	}
+	Instance.UseDevice(deviceInfo)
+	return nil
 }
 
 // GenRandomDevice 生成随机设备信息
 func GenRandomDevice() {
-	client.GenRandomDevice()
+	device := client.GenRandomDevice()
 	b, _ := utils.FileExist("./device.json")
 	if b {
 		logger.Warn("device.json exists, will not write device to file")
 		return
 	}
-	err := os.WriteFile("device.json", client.SystemDeviceInfo.ToJson(), os.FileMode(0755))
+	err := os.WriteFile("device.json", device.ToJson(), os.FileMode(0644))
 	if err != nil {
 		logger.WithError(err).Errorf("unable to write device.json")
 	}
